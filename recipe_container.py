@@ -12,8 +12,8 @@ import json
 flag = True
 #ctrl-f "if self.flag: print" to find all debug flags.""
 
-class container():
-    def __init__(self):
+class Container():
+    def __init__(self,raw,live_data=False):
         self.raw_data = {}
         self.raw_items = {}
         self.uniques = {"groups":{},"sub-groups":{}} #store unique recipe categorizations and items
@@ -21,12 +21,8 @@ class container():
         #self.production_sets = [] contain all needed items/recipes to get a chosen final item. 
         #should have another class to organize production lines and segment relevant recipes/items
 
-    def load_raw(self,input_file,live_data=False):
-        with open("input_file","r") as f:
-            raw = json.load(f)
-
         #func to filter attributes. returns dictionary
-        def filter_attributes(item):
+        def filter_attributes(item:dict):
             out = {}
             #attributes to keep
             out["name"] = item["name"]
@@ -58,6 +54,7 @@ class container():
             else: self.uniques["sub-groups"][self.raw_data[i]['subgroup']].append(i)
 
             #adding items. may change to dictionary instead of list to store source recipes?
+            #maybe get rid of type?
             if self.raw_data[i]["ingredients"] not in self.all_items: self.all_items.append(self.raw_data[i]['ingredients'])
             if self.raw_data[i]["products"] not in self.all_items: self.all_items.append(self.raw_data[i]['products'])
 
@@ -70,14 +67,80 @@ class container():
     #finding recipes from items
     def find_recipes(self, in_item): #pull ALL recipes containing an item
         pass
-    def find_producers(self, in_item): #find which recipes PRODUCE an item
-        pass
-    def find_consumers(self, in_item): #find which recipes USE an item
-        pass
+    def find_producers(self, in_item:str): 
+        """find which recipes PRODUCE an item"""
+        #so if i put in petroleum gas, basic/advanced oil processing pops up, as well as any other recipes that PRODUCE petroleum
+        out = []
+        for i in self.raw_data:
+            recipe = self.raw_data[i]
+            
+            items = [name["name"] for name in recipe["products"]]
+            if in_item in items:
+                out.append(recipe)
+                if flag:print(in_item + " is made in: " + (recipe["name"]))
+        
+        return out #returns a list of all producering recipes
+        #! LIST IS OF DICTIONARY VALUES. SHOULD STANDARDIZE STR INPUTS AND DICTIONARY OUTPUTS ?
 
-    def export(self):
-        with open("cleaned.json","w") as output:
+
+    def find_consumers(self, in_item:str): #find which recipes USE an item
+        out = []
+        for i in self.raw_data:
+            recipe = self.raw_data[i]
+            
+            items = [name["name"] for name in recipe["ingredients"]]
+            if in_item in items:
+                out.append(recipe)
+                if flag:print(in_item + " is used in: " + (recipe["name"]))
+        return out 
+
+    def find_products(self,recipe:str): 
+        out = []
+        names = [product["name"] for product in self.raw_data[recipe]["products"]]
+        quantity = [product["amount"] for product in self.raw_data[recipe]["products"]]
+        probability = []
+        for product in self.raw_data[recipe]["products"]:
+            try:
+                probability.append(product["probability"])
+            except:
+                probability.append(1)
+        for i in range(len(names)):
+            dichaha =      {"name": names[i],
+                             "amount": quantity[i],
+                             "probability": probability[i]}
+            out.append(dichaha)
+
+        return out #returns list of dictionary values of items
+    
+    def find_ingredients(self,recipe:str): 
+        out = []
+        names = [ingredient["name"] for ingredient in self.raw_data[recipe]["ingredients"]]
+        quantity = [ingredient["amount"] for ingredient in self.raw_data[recipe]["ingredients"]]
+        
+        for i in range(len(names)):
+            dickhaha =      {"name": names[i],
+                             "amount": quantity[i]}
+            out.append(dickhaha)
+
+        return out #returns list of dictionary values of items
+    def getGroups(self):
+        return list(self.uniques["groups"].keys())
+    def getSubgroups(self):
+        return list(self.uniques["sub-groups"].keys())
+    
+    def export(self,name="cleaned.json"):
+        with open(name,"w") as output:
             json.dump(self.raw_data,output,indent=4)
 
 if __name__ == "__main__":
-    pass
+    with open("recipe.json","r") as f:
+        raw = json.load(f)
+
+    container = Container(raw)
+    print(container.getGroups())
+    #container.export("exp_test.json")
+    #container.find_producers("matter")
+    print()
+    #container.find_consumers('iron-plate')
+    print()
+    print(container.find_products("coal-filtration"))

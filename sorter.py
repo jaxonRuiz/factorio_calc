@@ -19,4 +19,4 @@ for i in groups.keys():
     print(i)
 
 print()
-print(groups["environment"])
+print(groups["resources"])
