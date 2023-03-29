@@ -9,7 +9,7 @@ import json
 
 
 #can maybe use live data from updating factorio json file to work things, if i can get the live json file.
-flag = True
+flag = False
 #ctrl-f "if self.flag: print" to find all debug flags.""
 
 class Container():
@@ -44,7 +44,7 @@ class Container():
         self.update_data()
 
     def update_data(self):
-
+        
         for i in self.raw_data:
             #placing all recipes in uniques groups, and adding names under these dictionaries        
             if self.raw_data[i]['group'] not in self.uniques["groups"]: self.uniques["groups"][self.raw_data[i]['group']] = [i] #adding first entry for new group
@@ -59,7 +59,25 @@ class Container():
             if self.raw_data[i]["products"] not in self.all_items: self.all_items.append(self.raw_data[i]['products'])
 
     def delete_group(self, to_delete): #remove entire group from raw_data
-        pass
+        delete_set = []
+        for i in self.raw_data:
+            if self.raw_data[i]["group"] == to_delete:
+                delete_set.append(i)
+        for j in delete_set:
+            del self.raw_data[j]
+        del self.uniques['groups'][to_delete]
+        self.update_data()
+
+    def delete_subgroup(self, to_delete): #remove entire group from raw_data
+        delete_set = []
+        for i in self.raw_data:
+            if self.raw_data[i]["subgroup"] == to_delete:
+                delete_set.append(i)
+        for j in delete_set:
+            del self.raw_data[j]
+        del self.uniques['sub-groups'][to_delete]
+        self.update_data()
+        
     def delete_recipe(self, to_delete): #delete single recipe
         pass
 
@@ -77,13 +95,14 @@ class Container():
             items = [name["name"] for name in recipe["products"]]
             if in_item in items:
                 out.append(recipe)
-                if flag:print(in_item + " is made in: " + (recipe["name"]))
+                #if flag:print(in_item + " is made in: " + (recipe["name"]))
         
         return out #returns a list of all producering recipes
         #! LIST IS OF DICTIONARY VALUES. SHOULD STANDARDIZE STR INPUTS AND DICTIONARY OUTPUTS ?
 
 
     def find_consumers(self, in_item:str): #find which recipes USE an item
+        """find which recipes CONSUME an item"""
         out = []
         for i in self.raw_data:
             recipe = self.raw_data[i]
@@ -91,8 +110,8 @@ class Container():
             items = [name["name"] for name in recipe["ingredients"]]
             if in_item in items:
                 out.append(recipe)
-                if flag:print(in_item + " is used in: " + (recipe["name"]))
-        return out 
+                #if flag:print(in_item + " is used in: " + (recipe["name"]))
+        return out #returns list of consuming recipes
 
     def find_products(self,recipe:str): 
         out = []
@@ -131,15 +150,81 @@ class Container():
         with open(name,"w") as output:
             json.dump(self.raw_data,output,indent=4)
 
-class Node(Container): #contains head of recipe chain, and its ingredients. used together to make a production line
-    def __init__(self, head_item:str):
-        head = self.raw_data[head_item]
-        ingredients = [] #child nodes
+flag=True
 
-class ProductionLine(Node): #maybe redundant, but maybe needed to get totals...
-    def __init__(self,root_item:str):
-        root = self.raw_data[root_item]
-        ingredient_nodes = [] #contains nodes
+class Node(): #contains head of recipe chain, and its ingredients. used together to make a production line
+    def __init__(self, head_recipe:str,recipe_set:Container): 
+        data = recipe_set #store main dataset for use
+        self.ingredients = [] #all ingredients of a given recipe
+        self.products = [] #all outputs of a given recipe
+        self.ind = 0 #used to make looping easier lol
+        self.producers = "RAW" #stores recipe names that make head item. will be 'EMPTY' if item is raw
+        self.head = {'name':"RAW"}
+        try:
+            self.head = data.raw_data[head_recipe]
+        except:
+            if flag: print("===[raw item found: "+head_recipe+"]===")
+            self.head = {'name':head_recipe}
+        else:
+            self.producers = [recipe["name"] for recipe in data.find_producers(head_recipe)] #ingredient recipes (strs)
+            
+            for recipe in self.producers:
+                temp_ingredient = [item for item in data.find_ingredients(recipe)]
+                temp_product = [item for item in data.find_products(recipe)]
+                self.ingredients.append(temp_ingredient)
+                self.products.append(temp_product)
+            self.ind = range(len(self.products)) #for easier looping
+            if flag:
+                for i in self.ind:
+                    print("recipe: " +self.producers[i])
+                    print(f"products: {self.products[i]}")
+                    print(f"key product: {self.get_key_product(i)}")
+                    print(f"ingredients: {self.ingredients[i]}")
+                    print()
+    def get_key_product(self,index):
+        for item in self.products[index]:
+            if item['name'] == self.head['name']:
+                return item #only returns desired product for filtering
+    def __str__(self):
+        for i in self.ind:
+                print("recipe: " + self.producers[i])
+                print(f"products: {self.products[i]}")
+                print(f"key product: {self.get_key_product(i)}")
+                print(f"ingredients: {self.ingredients[i]}")
+                print()
+
+class ProductionUnit(Node): 
+    def __init__(self,root_recipe:str,recipe_set:Container):
+        self.node = Node(root_recipe,container)
+        self.data = recipe_set
+        self.branch_nodes = [] #contains nodes
+    
+    def full_traverse(self): #THIS IS RECURSION CODE, ITS NOT CHECKING CHILD NODES CORRECTLY (or maybe it works? recycling recipes just fucked it up i think)
+        if self.node.producers != "RAW": #only goes if not a raw item
+            #do i need to clear branch nodes? prob wont use this func multiple times, but whatever
+            self.branch_nodes.clear()
+            for i in self.node.ind:
+                
+                for j in self.node.ind:
+                    try: #checking for RAW. may be better solution
+                        print(self.node.ingredients[i][j]["name"])
+                        self.branch_nodes.append(ProductionUnit(self.node.ingredients[i][j]["name"],self.data)) #should go and repeat process with each ingredient of head.
+                        self.branch_nodes[j].full_traverse()
+                    except:
+                        pass
+
+    def print_rec(self):
+        out = ""
+        out+="["
+        out += self.node.head['name']
+        out+=": "
+        for i in range(len(self.branch_nodes)):
+            out += self.branch_nodes[i].print_rec()
+        out+="] "
+        return out
+    def __str__(self):
+        out = self.print_rec()
+        return out
 
 """
 processing step ideas:
@@ -159,9 +244,12 @@ if __name__ == "__main__":
 
     container = Container(raw)
     print(container.getGroups())
-    #container.export("exp_test.json")
-    #container.find_producers("matter")
-    print()
-    #container.find_consumers('iron-plate')
-    print()
-    print(container.find_products("coal-filtration"))
+
+    container.delete_group("smelting-crafting")
+    container.delete_subgroup("recycling")
+    print(container.getGroups())
+
+
+    testNode = ProductionUnit("electronic-circuit",container)
+    testNode.full_traverse()
+    print(testNode)
