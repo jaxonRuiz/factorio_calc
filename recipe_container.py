@@ -158,40 +158,37 @@ class Node(): #contains head of recipe chain, and its ingredients. used together
         self.ingredients = [] #all ingredients of a given recipe
         self.products = [] #all outputs of a given recipe
         self.ind = 0 #used to make looping easier lol
-        self.producers = "RAW" #stores recipe names that make head item. will be 'EMPTY' if item is raw
-        self.head = {'name':"RAW"}
+        self.producer = "RAW" #stores recipe names that make head item. will be 'EMPTY' if item is raw
+        self.head = {'name':"RAW"} #use head for actual naming i guess
         try:
-            self.head = data.raw_data[head_recipe]
+            self.head = data.raw_data[head_recipe] #full data set if ever needed
         except:
             if flag: print("===[raw item found: "+head_recipe+"]===")
             self.head = {'name':head_recipe}
         else:
-            self.producers = [recipe["name"] for recipe in data.find_producers(head_recipe)] #ingredient recipes (strs)
-            
-            for recipe in self.producers:
-                temp_ingredient = [item for item in data.find_ingredients(recipe)]
-                temp_product = [item for item in data.find_products(recipe)]
-                self.ingredients.append(temp_ingredient)
-                self.products.append(temp_product)
-            self.ind = range(len(self.products)) #for easier looping
+            self.producer = head_recipe
+            self.ingredients = data.find_ingredients(self.producer)
+            self.products = data.find_products(self.producer)
+
+            self.ind = range(len(self.ingredients)) #for easier looping
             if flag:
-                for i in self.ind:
-                    print("recipe: " +self.producers[i])
-                    print(f"products: {self.products[i]}")
-                    print(f"key product: {self.get_key_product(i)}")
-                    print(f"ingredients: {self.ingredients[i]}")
-                    print()
-    def get_key_product(self,index):
-        for item in self.products[index]:
+                print("recipe: " +self.producer)
+                print(f"products: {self.products}")
+                print(f"key product: {self.get_key_product()}")
+                print(f"ingredients: {self.ingredients}")
+                print()
+
+    def get_key_product(self):
+        for item in self.products:
+            print(item)
             if item['name'] == self.head['name']:
                 return item #only returns desired product for filtering
     def __str__(self):
-        for i in self.ind:
-                print("recipe: " + self.producers[i])
-                print(f"products: {self.products[i]}")
-                print(f"key product: {self.get_key_product(i)}")
-                print(f"ingredients: {self.ingredients[i]}")
-                print()
+            print("recipe: " + self.producer)
+            print(f"products: {self.products}")
+            print(f"key product: {self.get_key_product()}")
+            print(f"ingredients: {self.ingredients}")
+            print()
 
 class ProductionUnit(Node): 
     def __init__(self,root_recipe:str,recipe_set:Container):
@@ -200,28 +197,32 @@ class ProductionUnit(Node):
         self.branch_nodes = [] #contains nodes
     
     def full_traverse(self): #THIS IS RECURSION CODE, ITS NOT CHECKING CHILD NODES CORRECTLY (or maybe it works? recycling recipes just fucked it up i think)
-        if self.node.producers != "RAW": #only goes if not a raw item
+        if self.node.producer != "RAW": #only goes if not a raw item
             #do i need to clear branch nodes? prob wont use this func multiple times, but whatever
             self.branch_nodes.clear()
             for i in self.node.ind:
-                
-                for j in self.node.ind:
-                    try: #checking for RAW. may be better solution
-                        print(self.node.ingredients[i][j]["name"])
-                        self.branch_nodes.append(ProductionUnit(self.node.ingredients[i][j]["name"],self.data)) #should go and repeat process with each ingredient of head.
-                        self.branch_nodes[j].full_traverse()
-                    except:
-                        pass
+                try: #checking for RAW. may be better solution
+                    print(str(i))
+                    print(self.node.ingredients[i]["name"])
+                    self.branch_nodes.append(ProductionUnit(self.node.ingredients[i]["name"],self.data)) #should go and repeat process with each ingredient of head.
+                    self.branch_nodes[i].full_traverse()
+                except:
+                    pass
 
-    def print_rec(self):
-        out = ""
+    def print_rec(self,spacer=0):
+        out = "\n"
+        for i in range(spacer):
+            out+="  "
         out+="["
         out += self.node.head['name']
         out+=": "
+        if self.node.producer == "RAW": 
+                out+= "RAW"
         for i in range(len(self.branch_nodes)):
-            out += self.branch_nodes[i].print_rec()
-        out+="] "
+            out += self.branch_nodes[i].print_rec(spacer+1)
+        out+=" ]"
         return out
+    
     def __str__(self):
         out = self.print_rec()
         return out
@@ -249,7 +250,7 @@ if __name__ == "__main__":
     container.delete_subgroup("recycling")
     print(container.getGroups())
 
-
-    testNode = ProductionUnit("electronic-circuit",container)
+    #input to production unit is recipe. for ui, maybe have a way to get recipe from item..
+    testNode = ProductionUnit("se-rocket-launch-pad",container)
     testNode.full_traverse()
     print(testNode)
