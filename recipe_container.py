@@ -118,10 +118,9 @@ class Container():
         quantity = [ingredient["amount"] for ingredient in self.raw_data[recipe]["ingredients"]]
         
         for i in range(len(names)):
-            dickhaha =      {"name": names[i],
+            dichaha =      {"name": names[i],
                              "amount": quantity[i]}
-            out.append(dickhaha)
-
+            out.append(dichaha)
         return out #returns list of dictionary values of items
     def getGroups(self):
         return list(self.uniques["groups"].keys())
@@ -131,6 +130,28 @@ class Container():
     def export(self,name="cleaned.json"):
         with open(name,"w") as output:
             json.dump(self.raw_data,output,indent=4)
+
+class Node(Container): #contains head of recipe chain, and its ingredients. used together to make a production line
+    def __init__(self, head_item:str):
+        head = self.raw_data[head_item]
+        ingredients = [] #child nodes
+
+class ProductionLine(Node): #maybe redundant, but maybe needed to get totals...
+    def __init__(self,root_item:str):
+        root = self.raw_data[root_item]
+        ingredient_nodes = [] #contains nodes
+
+"""
+processing step ideas:
+
+-DFS recursion search to get all needed recipes (branching through possible paths based on multiple recipes)
+
+-start from given point, standardize to 1/s, and apply to all ingredients. standardize their ingredients from there
+
+-create specified class to store root recipe, and have branching connections downwards as needed. maintain node connections through own class. probably this.
+more redundant, but i get to make my own tools by hand...
+^i think do this idea for now.
+"""
 
 if __name__ == "__main__":
     with open("recipe.json","r") as f:
