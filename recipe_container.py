@@ -114,6 +114,7 @@ class Container():
         return out #returns list of consuming recipes
 
     def find_products(self,recipe:str): 
+        """returns list of item dictionaries"""
         out = []
         names = [product["name"] for product in self.raw_data[recipe]["products"]]
         quantity = [product["amount"] for product in self.raw_data[recipe]["products"]]
@@ -132,6 +133,7 @@ class Container():
         return out #returns list of dictionary values of items
     
     def find_ingredients(self,recipe:str): 
+        """returns list of item dictionaries"""
         out = []
         names = [ingredient["name"] for ingredient in self.raw_data[recipe]["ingredients"]]
         quantity = [ingredient["amount"] for ingredient in self.raw_data[recipe]["ingredients"]]
@@ -140,7 +142,7 @@ class Container():
             dichaha =      {"name": names[i],
                              "amount": quantity[i]}
             out.append(dichaha)
-        return out #returns list of dictionary values of items
+        return out #returns list of dictionary values of ITEMS
     def getGroups(self):
         return list(self.uniques["groups"].keys())
     def getSubgroups(self):
@@ -150,7 +152,7 @@ class Container():
         with open(name,"w") as output:
             json.dump(self.raw_data,output,indent=4)
 
-flag=True
+
 
 class Node(): #contains head of recipe chain, and its ingredients. used together to make a production line
     def __init__(self, head_recipe:str,recipe_set:Container): 
@@ -172,11 +174,8 @@ class Node(): #contains head of recipe chain, and its ingredients. used together
 
             self.ind = range(len(self.ingredients)) #for easier looping
             if flag:
-                print("recipe: " +self.producer)
-                print(f"products: {self.products}")
-                print(f"key product: {self.get_key_product()}")
-                print(f"ingredients: {self.ingredients}")
-                print()
+                self.__str__()
+                
 
     def get_key_product(self):
         for item in self.products:
@@ -190,6 +189,8 @@ class Node(): #contains head of recipe chain, and its ingredients. used together
             print(f"ingredients: {self.ingredients}")
             print()
 
+
+flag=False
 class ProductionUnit(Node): 
     def __init__(self,root_recipe:str,recipe_set:Container):
         self.node = Node(root_recipe,container)
@@ -202,17 +203,17 @@ class ProductionUnit(Node):
             self.branch_nodes.clear()
             for i in self.node.ind:
                 try: #checking for RAW. may be better solution
-                    print(str(i))
-                    print(self.node.ingredients[i]["name"])
+                    #print(self.node.ingredients[i]["name"])
                     self.branch_nodes.append(ProductionUnit(self.node.ingredients[i]["name"],self.data)) #should go and repeat process with each ingredient of head.
                     self.branch_nodes[i].full_traverse()
                 except:
+                    print("something happened during full_traversal")
                     pass
 
     def print_rec(self,spacer=0):
         out = "\n"
         for i in range(spacer):
-            out+="  "
+            out+=" | "
         out+="["
         out += self.node.head['name']
         out+=": "
@@ -220,7 +221,7 @@ class ProductionUnit(Node):
                 out+= "RAW"
         for i in range(len(self.branch_nodes)):
             out += self.branch_nodes[i].print_rec(spacer+1)
-        out+=" ]"
+        out+="]"
         return out
     
     def __str__(self):
@@ -246,11 +247,13 @@ if __name__ == "__main__":
     container = Container(raw)
     print(container.getGroups())
 
-    container.delete_group("smelting-crafting")
-    container.delete_subgroup("recycling")
+    #container.delete_group("smelting-crafting")
+    #container.delete_subgroup("recycling")
     print(container.getGroups())
 
     #input to production unit is recipe. for ui, maybe have a way to get recipe from item..
-    testNode = ProductionUnit("se-rocket-launch-pad",container)
-    testNode.full_traverse()
-    print(testNode)
+    rootNode = ProductionUnit("se-rocket-launch-pad",container)
+    rootNode.full_traverse()
+    print(rootNode)
+
+    #use memoization optimization for recursive calls...
