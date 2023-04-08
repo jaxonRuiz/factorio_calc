@@ -130,7 +130,7 @@ class Container():
                              "probability": probability[i]}
             out.append(dichaha)
 
-        return out #returns list of dictionary values of items
+        return out #returns list of dictionary items
     
     def find_ingredients(self,recipe:str): 
         """returns list of item dictionaries"""
@@ -163,7 +163,7 @@ class Node(): #contains head of recipe chain, and its ingredients. used together
         self.producer = "RAW" #stores recipe names that make head item. will be 'EMPTY' if item is raw
         self.head = {'name':"RAW"} #use head for actual naming i guess
         try:
-            self.head = data.raw_data[head_recipe] #full data set if ever needed
+            self.head = data.raw_data[head_recipe] #full data set of item if ever needed
         except:
             if flag: print("===[raw item found: "+head_recipe+"]===")
             self.head = {'name':head_recipe}
@@ -193,7 +193,7 @@ class Node(): #contains head of recipe chain, and its ingredients. used together
 flag=False
 class ProductionUnit(Node): 
     def __init__(self,root_recipe:str,recipe_set:Container):
-        self.node = Node(root_recipe,container)
+        self.node = Node(root_recipe,recipe_set)
         self.data = recipe_set
         self.branch_nodes = [] #contains nodes
     
@@ -253,6 +253,7 @@ if __name__ == "__main__":
 
     #input to production unit is recipe. for ui, maybe have a way to get recipe from item..
     rootNode = ProductionUnit("se-rocket-launch-pad",container)
+    print(rootNode.node.ingredients)
     rootNode.full_traverse()
     print(rootNode)
 
