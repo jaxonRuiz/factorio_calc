@@ -43,7 +43,6 @@ def collect_totals(cur:ProductionUnit,running_dic={}):
             if len(cur.branch_nodes[i].branch_nodes) >0:
                 running_dic = update_dic(collect_totals(cur.branch_nodes[i],running_dic),running_dic) #issue is here. new dic not being read
                 #correctly. 
-
     else: #base case if raw item (no ingredients)
         print('raw item found')
         return running_dic
@@ -53,3 +52,5 @@ print()
 
 d=collect_totals(prod)
 print(d)
+
+#i did this shit fucked out of my mind. none of its working. im just gonna redo it...
